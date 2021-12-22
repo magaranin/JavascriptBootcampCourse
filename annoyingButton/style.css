@@ -1,0 +1,12 @@
+body {
+    overflow-x: hidden;
+    overflow-y: hidden;
+}
+
+button {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    height: 50px;
+    width: 100px;
+}
