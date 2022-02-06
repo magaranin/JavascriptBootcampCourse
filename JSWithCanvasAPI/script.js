@@ -1,12 +1,19 @@
-const {Engine, Render, Runner, World, Bodies} = Matter;
+const {Engine, Render, Runner, World, Bodies, Body, Events} = Matter;
 
-const cells = 10;
-const width = 600;
-const height = 600;
+const acceleration = 1;
+const innerWallThickness = 5;
+const cellsHorizontal = 10;
+const cellsVerticals = 8;
+const width = window.innerWidth;
+const height = window.innerHeight;
 
-const unitLength = width / cells;
+
+const unitLengthX = width / cellsHorizontal;
+const unitLengthY = height / cellsVerticals;
 
 const engine = Engine.create();
+//disable gravity
+engine.world.gravity.y = 0;
 const {world} = engine;
 const render = Render.create({
     element: document.body,
@@ -21,13 +28,15 @@ const render = Render.create({
 Render.run(render);
 Runner.run(Runner.create(), engine);
 
-
+const thickness = 100;
 //Walls
 const walls = [
-    Bodies.rectangle(width / 2 , 0, width, 1, {isStatic: true}),
-    Bodies.rectangle(width / 2, height, height, 1, {isStatic: true}),
-    Bodies.rectangle(0, height / 2, 1, height, {isStatic: true}),
-    Bodies.rectangle(width, height / 2, 1, height, {isStatic: true})
+    //X
+    Bodies.rectangle(width / 2 , -(thickness/2), width, thickness, {isStatic: true}),
+    Bodies.rectangle(width / 2, height + (thickness/2), width, thickness, {isStatic: true}),
+    //Y
+    Bodies.rectangle(-(thickness/2), height / 2, thickness, height, {isStatic: true}),
+    Bodies.rectangle(width + (thickness/2), height / 2, thickness, height, {isStatic: true})
 ];
 World.add(world, walls);
 
@@ -46,21 +55,21 @@ const shuffle = (arr) => {
     return arr;
 };
 
-const grid = Array(cells )
+const grid = Array(cellsVerticals)
 .fill(null)
-.map(() => Array(cells ).fill(false));
+.map(() => Array(cellsHorizontal).fill(false));
 
-const verticals = Array(cells)
+const verticals = Array(cellsVerticals)
 .fill(null)
-.map(() => Array(cells - 1).fill(false));
+.map(() => Array(cellsHorizontal - 1).fill(false));
 
-const horizontals = Array(cells - 1)
+const horizontals = Array(cellsVerticals - 1)
 .fill(null)
-.map(() => Array(cells ).fill(false));
+.map(() => Array(cellsHorizontal).fill(false));
 
 //start row/column coordinates 
-const startRow = Math.floor(Math.random() * cells);
-const startColumn = Math.floor(Math.random() * cells);
+const startRow = Math.floor(Math.random() * cellsVerticals);
+const startColumn = Math.floor(Math.random() * cellsHorizontal);
 
 //iterating through the maze
 const stepThroughCell = (row, column) => {
@@ -83,7 +92,7 @@ const stepThroughCell = (row, column) => {
         const [nextRow, nextColumn, direction] = neighbor;
 
     //see if that neighbor is out of bounds 
-        if (nextRow < 0 || nextRow >= cells || nextColumn < 0 || nextColumn >= cells) {
+        if (nextRow < 0 || nextRow >= cellsVerticals || nextColumn < 0 || nextColumn >= cellsHorizontal) {
             continue;
         }
     //if we have visited that neighbor, continue to next neighbor
@@ -114,14 +123,15 @@ horizontals.forEach((row, rowIndex) => {
       
         const wall = Bodies.rectangle(
             // X coordinates 
-            columnIndex * unitLength + unitLength / 2,
+            columnIndex * unitLengthX + unitLengthX / 2,
             // Y coordinates 
-            rowIndex * unitLength + unitLength,
+            rowIndex * unitLengthY + unitLengthY,
             //Wide
-            unitLength,
+            unitLengthX,
             //tall
-            1,
+            innerWallThickness,
             {
+                label: 'wall',
                 isStatic: true
             }
         );
@@ -137,14 +147,15 @@ verticals.forEach((row, rowIndex) => {
       
         const wall = Bodies.rectangle(
             // X coordinates 
-            columnIndex * unitLength + unitLength,
+            columnIndex * unitLengthX + unitLengthX,
             // Y coordinates 
-            rowIndex * unitLength + unitLength / 2,
+            rowIndex * unitLengthY + unitLengthY / 2,
             //Wide
-            1,
+            innerWallThickness,
             //tall
-            unitLength,
+            unitLengthY,
             {
+                label: 'wall',
                 isStatic: true
             }
         );
@@ -155,29 +166,69 @@ verticals.forEach((row, rowIndex) => {
 //Goal
 const goal = Bodies.rectangle(
     // X coordinate 
-    width - unitLength / 2,
+    width - unitLengthX / 2,
     // Y coordinate 
-    height - unitLength / 2,
+    height - unitLengthY / 2,
     //width
-    unitLength * 0.7,
+    unitLengthX * 0.7,
     //height
-    unitLength * 0.7,
+    unitLengthY * 0.7,
     {
-        isStatic: true
+        label: 'goal',
+        isStatic: false
     }
 );
 World.add(world, goal);
 
+//radius of the ball
+const ballRadius = Math.min(unitLengthX, unitLengthY) / 4;
 //Ball
 const ball = Bodies.circle(
     // X coordinate
-    unitLength / 2,
+    unitLengthX / 2,
     // Y coordinate 
-    unitLength / 2,
+    unitLengthY / 2,
     //ball size
-    unitLength * 0.25,
-    {
-        isStatic: true
+    ballRadius, {
+       label: 'ball'
     }
 );
 World.add(world, ball);
+
+document.addEventListener('keydown', event => {
+    const {x, y} = ball.velocity;
+    //up
+    if (event.keyCode === 87) {
+       Body.setVelocity(ball, {x, y: y - acceleration});
+    }
+    //right
+    if (event.keyCode === 68) {
+        Body.setVelocity(ball, {x: x + acceleration, y});
+    }
+    //down
+    if (event.keyCode === 83) {
+        Body.setVelocity(ball, {x, y: y + acceleration});
+    }
+    //left
+    if (event.keyCode === 65) {
+        Body.setVelocity(ball, {x: x - acceleration, y});
+    }
+})
+
+// Win Condition
+
+Events.on(engine, 'collisionStart', event => {
+    event.pairs.forEach((collision) => {
+        const labels = ['ball', 'goal'];
+        if (labels.includes(collision.bodyA.label) && labels.includes(collision.bodyB.label)) {
+            // turn gravity on 
+            world.gravity.y = 1; 
+            //loop over all the shapes 
+            world.bodies.forEach(body => {
+                if (body.label === 'wall') {
+                    Body.setStatic(body, false);
+                }
+            });
+        }       
+    });
+});
