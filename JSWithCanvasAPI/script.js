@@ -3,7 +3,7 @@ const {Engine, Render, Runner, World, Bodies, Body, Events} = Matter;
 const acceleration = 1;
 const innerWallThickness = 5;
 const cellsHorizontal = 10;
-const cellsVerticals = 8;
+const cellsVerticals = 7;
 const width = window.innerWidth;
 const height = window.innerHeight;
 
@@ -19,7 +19,7 @@ const render = Render.create({
     element: document.body,
     engine: engine,
     options: {
-        wireframes: true, // solid shape and random color
+        wireframes: false, // solid shape and random color
         width,
         height
     }
@@ -28,7 +28,7 @@ const render = Render.create({
 Render.run(render);
 Runner.run(Runner.create(), engine);
 
-const thickness = 100;
+const thickness = 50;
 //Walls
 const walls = [
     //X
@@ -132,7 +132,10 @@ horizontals.forEach((row, rowIndex) => {
             innerWallThickness,
             {
                 label: 'wall',
-                isStatic: true
+                isStatic: true,
+                render: {
+                    fillStyle: 'red'
+                }
             }
         );
         World.add(world, wall);
@@ -156,7 +159,10 @@ verticals.forEach((row, rowIndex) => {
             unitLengthY,
             {
                 label: 'wall',
-                isStatic: true
+                isStatic: true,
+                render: {
+                    fillStyle: 'red'
+                }
             }
         );
         World.add(world, wall);
@@ -175,7 +181,10 @@ const goal = Bodies.rectangle(
     unitLengthY * 0.7,
     {
         label: 'goal',
-        isStatic: false
+        isStatic: false,
+        render: {
+            fillStyle: 'lightgreen'
+        }
     }
 );
 World.add(world, goal);
@@ -190,7 +199,10 @@ const ball = Bodies.circle(
     unitLengthY / 2,
     //ball size
     ballRadius, {
-       label: 'ball'
+        label: 'ball',
+        render: {
+            fillStyle: 'blue'
+        }
     }
 );
 World.add(world, ball);
@@ -221,6 +233,7 @@ Events.on(engine, 'collisionStart', event => {
     event.pairs.forEach((collision) => {
         const labels = ['ball', 'goal'];
         if (labels.includes(collision.bodyA.label) && labels.includes(collision.bodyB.label)) {
+            document.querySelector('.winner').classList.remove('hidden');
             // turn gravity on 
             world.gravity.y = 1; 
             //loop over all the shapes 
